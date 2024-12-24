@@ -13,8 +13,8 @@ graphql:
   playground:
     enabled: true
     tabs:
-      - name: AppLogs by Level
-        query: classpath:META-INF/resources/graphql/appLogsByLevel.graphql
+      - name: Books by Title
+        query: classpath:META-INF/resources/graphql/booksByTitle.graphql
       - name: Employee of the Year
         query: classpath:META-INF/resources/graphql/employeeOfTheYear.graphql
       - name: Bestseller
