@@ -209,17 +209,6 @@ public final class BookStoreDemo implements HasLogger
 	}
 
 	/**
-	 * Gets the {@link Data} root object of this demo.
-	 * This is the entry point to all of the data used in this application, basically the "database".
-	 *
-	 * @return the {@link Data} root object of this demo
-	 */
-	public Data data()
-	{
-		return (Data)this.storageManager().root();
-	}
-
-	/**
 	 * Shuts down the {@link EmbeddedStorageManager} of this demo.
 	 */
 	public synchronized void shutdown()
