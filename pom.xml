@@ -10,10 +10,10 @@
 	</parent>
 
 	<groupId>org.eclipse.store</groupId>
-	<artifactId>bookstore-demo</artifactId>
+	<artifactId>applogs</artifactId>
 	<version>1.0.0-SNAPSHOT</version>
 
-	<name>EclipseStore BookStore Demo</name>
+	<name>AppLogs Demo</name>
 
 	<organization>
 		<name>MicroStream Software</name>
@@ -159,7 +159,7 @@
 				<configuration>
 					<wait>500</wait>
 					<maxAttempts>240</maxAttempts>
-					<mainClass>org.eclipse.store.demo.bookstore.VaadinApplication</mainClass>
+					<mainClass>org.eclipse.store.demo.applogs.VaadinApplication</mainClass>
 				</configuration>
 			</plugin>
 			<plugin>
@@ -207,7 +207,7 @@
 						<groupId>org.springframework.boot</groupId>
 						<artifactId>spring-boot-maven-plugin</artifactId>
 						<configuration>
-							<mainClass>org.eclipse.store.demo.bookstore.VaadinApplication</mainClass>
+							<mainClass>org.eclipse.store.demo.applogs.VaadinApplication</mainClass>
 						</configuration>
 					</plugin>
 					<plugin>
