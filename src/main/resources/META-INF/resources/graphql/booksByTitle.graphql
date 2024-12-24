@@ -1,5 +1,5 @@
 {
-  booksByTitle(title: "heart") {
+  appLogsByLevel(Level: "ERROR") {
     title,
     author {
 	  name
