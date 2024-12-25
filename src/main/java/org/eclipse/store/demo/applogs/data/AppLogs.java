@@ -26,6 +26,7 @@ import static org.javamoney.moneta.function.MonetaryFunctions.summarizingMonetar
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IntSummaryStatistics;
@@ -35,6 +36,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.money.MonetaryAmount;
@@ -92,7 +94,8 @@ public class AppLogs extends ReadWriteLockedStriped
 			addToMap(
 					this.levelToAppLogs,
 					appLog.level(),
-					appLog, changedObjects
+					appLog,
+					changedObjects
 			);
 			if(persister != null && changedObjects.size() > 0)
 			{
@@ -186,7 +189,7 @@ public class AppLogs extends ReadWriteLockedStriped
 	/**
 	 * Map with {@link DailyLogs}, indexed by the year, of course.
 	 */
-	private final Map<LocalDate, Lazy<DailyLogs>> dailyLogs = new ConcurrentHashMap<>(32);
+	private final Map<LocalDate, Lazy<DailyLogs>> dailyLogs = new ConcurrentHashMap<>();
 
 	public AppLogs()
 	{
@@ -241,17 +244,18 @@ public class AppLogs extends ReadWriteLockedStriped
 	}
 
 	/**
-	 * Gets the range of all years in which purchases were made.
+	 * Gets the Oldest and newest day in which app logs were made.
 	 *
 	 * @return all years with revenue
 	 */
-	public Range<Integer> years()
+	public Range<LocalDate> days()
 	{
 		return this.read(0, () -> {
-			final IntSummaryStatistics summary = this.dailyLogs.keySet().stream()
-				.mapToInt(Integer::intValue)
-				.summaryStatistics();
-			return Range.closed(summary.getMin(), summary.getMax());
+			final List<LocalDate> summary = this.dailyLogs.keySet().stream()
+					.sorted((currentDate, nextDate) -> currentDate.compareTo(nextDate)).toList();
+			LocalDate oldest = !summary.isEmpty() ? summary.get(0) : null;
+			LocalDate newest = !summary.isEmpty() && summary.size() >= 1 ? summary.get(summary.size() - 1) : null;
+			return Range.closed(oldest, newest);
 		});
 	}
 
@@ -263,10 +267,10 @@ public class AppLogs extends ReadWriteLockedStriped
 	 */
 	public void clear()
 	{
-		final List<Integer> years = this.read(0, () ->
+		final List<LocalDate> days = this.read(0, () ->
 			new ArrayList<>(this.dailyLogs.keySet())
 		);
-		years.forEach(this::clear);
+		days.forEach(this::clear);
 	}
 
 	/**
@@ -277,11 +281,11 @@ public class AppLogs extends ReadWriteLockedStriped
 	 * @see #clear()
 	 */
 	public void clear(
-		final int year
+		final LocalDate day
 	)
 	{
-		this.write(year, () ->
-			clearIfStored(this.dailyLogs.get(year))
+		this.write(day, () ->
+			clearIfStored(this.dailyLogs.get(day))
 				.ifPresent(DailyLogs::clear)
 		);
 	}
@@ -294,18 +298,18 @@ public class AppLogs extends ReadWriteLockedStriped
 	 * @param streamFunction computing function
 	 * @return the computed result
 	 */
-	public <T> T computeByYear(
-		final int                           year          ,
-		final Function<Stream<Purchase>, T> streamFunction
+	public <T> T computeByDay(
+		final LocalDate                      day          ,
+		final Function<Stream<AppLog>, T> streamFunction
 	)
 	{
-		return this.read(year, () ->
+		return this.read(day, () ->
 		{
-			final DailyLogs yearlyPurchases = Lazy.get(this.dailyLogs.get(year));
+			final DailyLogs dailyLogs = Lazy.get(this.dailyLogs.get(day));
 			return streamFunction.apply(
-				yearlyPurchases == null
+				dailyLogs == null
 					? Stream.empty()
-					: yearlyPurchases.shopToPurchases.values().parallelStream()
+					: dailyLogs.levelToAppLogs.values().parallelStream()
 						.map(l -> l.get())
 						.flatMap(List::stream)
 			);
@@ -321,19 +325,19 @@ public class AppLogs extends ReadWriteLockedStriped
 	 * @param streamFunction computing function
 	 * @return the computed result
 	 */
-	public <T> T computeByShopAndYear(
-		final Shop                          shop          ,
-		final int                           year          ,
-		final Function<Stream<Purchase>, T> streamFunction
+	public <T> T computeByLevelAndDay(
+		final Level                         level        ,
+		final LocalDate                     day          ,
+		final Function<Stream<AppLog>, T> streamFunction
 	)
 	{
-		return this.read(year, () ->
+		return this.read(day, () ->
 		{
-			final DailyLogs yearlyPurchases = Lazy.get(this.dailyLogs.get(year));
+			final DailyLogs dailyLogs = Lazy.get(this.dailyLogs.get(day));
 			return streamFunction.apply(
-				yearlyPurchases == null
+				dailyLogs == null
 					? Stream.empty()
-					: yearlyPurchases.byShop(shop)
+					: dailyLogs.byLevel(level)
 			);
 		});
 	}
@@ -347,74 +351,23 @@ public class AppLogs extends ReadWriteLockedStriped
 	 * @param streamFunction computing function
 	 * @return the computed result
 	 */
-	public <T> T computeByShopsAndYear(
-		final Predicate<Shop>               shopSelector  ,
-		final int                           year          ,
-		final Function<Stream<Purchase>, T> streamFunction
+	public <T> T computeByLevelsAndDay(
+		final Predicate<Level>              levelSelector  ,
+		final LocalDate                     day          ,
+		final Function<Stream<AppLog>, T>   streamFunction
 	)
 	{
-		return this.read(year, () ->
+		return this.read(day, () ->
 		{
-			final DailyLogs yearlyPurchases = Lazy.get(this.dailyLogs.get(year));
+			final DailyLogs dailyLogs = Lazy.get(this.dailyLogs.get(day));
 			return streamFunction.apply(
-				yearlyPurchases == null
+				dailyLogs == null
 					? Stream.empty()
-					: yearlyPurchases.byShops(shopSelector)
+					: dailyLogs.byLevel(levelSelector)
 			);
 		});
 	}
 
-	/**
-	 * Executes a function with a pre-filtered {@link Stream} of {@link Purchase}s and returns the computed value.
-	 *
-	 * @param <T> the return type
-	 * @param employee employee to filter by
-	 * @param year year to filter by
-	 * @param streamFunction computing function
-	 * @return the computed result
-	 */
-	public <T> T computeByEmployeeAndYear(
-		final Employee                      employee      ,
-		final int                           year          ,
-		final Function<Stream<Purchase>, T> streamFunction
-	)
-	{
-		return this.read(year, () ->
-		{
-			final DailyLogs yearlyPurchases = Lazy.get(this.dailyLogs.get(year));
-			return streamFunction.apply(
-				yearlyPurchases == null
-					? Stream.empty()
-					: yearlyPurchases.byEmployee(employee)
-			);
-		});
-	}
-
-	/**
-	 * Executes a function with a pre-filtered {@link Stream} of {@link Purchase}s and returns the computed value.
-	 *
-	 * @param <T> the return type
-	 * @param customer customer to filter by
-	 * @param year year to filter by
-	 * @param streamFunction computing function
-	 * @return the computed result
-	 */
-	public <T> T computeByCustomerAndYear(
-		final Customer                      customer      ,
-		final int                           year          ,
-		final Function<Stream<Purchase>, T> streamFunction
-	)
-	{
-		return this.read(year, () ->
-		{
-			final DailyLogs yearlyPurchases = Lazy.get(this.dailyLogs.get(year));
-			return streamFunction.apply(
-				yearlyPurchases == null
-					? Stream.empty()
-					: yearlyPurchases.byCustomer(customer)
-			);
-		});
-	}
 
 	/**
 	 * Computes the best selling books for a specific year.

@@ -45,7 +45,7 @@ import org.eclipse.serializer.exceptions.IORuntimeException;
  * All operations on this type are thread safe.
  *
  * @param <T> the object type
- * @see Books.Default#searchByTitle(String)
+ * @see Books#searchByTitle(String)
  */
 public class Index<T> implements Closeable
 {

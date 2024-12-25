@@ -1,7 +1,11 @@
 package org.eclipse.store.demo.applogs.ui.views;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Stream;
 
+import com.vaadin.flow.component.notification.Notification;
+import com.vaadin.flow.component.textfield.TextField;
 import org.eclipse.store.demo.applogs.AppLogsDemo;
 import org.eclipse.store.demo.applogs.data.Book;
 import org.eclipse.store.demo.applogs.data.Books;
@@ -65,6 +69,23 @@ public class ViewBooks extends ViewEntity<Book>
 			event -> this.openCreateBookDialog()
 		);
 
+		// Create a TextField for search input
+		TextField searchField = new TextField("Search by title");
+		searchField.setPlaceholder("Enter book title...");
+		// Create a Button to trigger the search
+		Button searchButton = new Button("Search");
+		// Add a click listener to the button
+		searchButton.addClickListener(event -> {
+			String searchText = searchField.getValue();
+			List<Book> results = AppLogsDemo.getInstance().data().books().searchByTitle(searchText);
+			if (results.isEmpty()) {
+				Notification.show("No books found with title: " + searchText);
+			} else {
+				Notification.show(results.size() + " book(s) found with title: " + searchText);
+				// You can also display the results in a grid or other component
+			}
+		});
+		this.add(new HorizontalLayout(searchField, searchButton));
 		this.add(new HorizontalLayout(showInventoryButton, createBookButton));
 	}
 
