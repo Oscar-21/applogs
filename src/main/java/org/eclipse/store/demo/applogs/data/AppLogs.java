@@ -5,7 +5,7 @@ package org.eclipse.store.demo.applogs.data;
  * #%L
  * EclipseStore BookStore Demo
  * %%
- * Copyright (C) 2023 MicroStream Software
+ * Copyright (C) 2023 MicroStream Softwa
  * %%
  * This program and the accompanying materials are made
  * available under the terms of the Eclipse Public License 2.0
